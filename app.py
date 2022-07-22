@@ -1,4 +1,3 @@
-from hashlib import new
 from flask import Flask, make_response, request, g, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
