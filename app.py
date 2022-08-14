@@ -1,11 +1,12 @@
 from flask import Flask, make_response, request, g, abort
+import os
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime as dt, timedelta
 import secrets
-import os
+from flask_cors import CORS
 
 
 class Config():
@@ -20,6 +21,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 basic_auth = HTTPBasicAuth()
 token_auth = HTTPTokenAuth()
+cors = CORS(app)
 
 
 @basic_auth.verify_password
@@ -236,7 +238,6 @@ class Ingredient(db.Model):
 '''
     ### USER ROUTES ###
 @app.get('/login')
-@basic_auth.login_required()
 def login():
     '''
         BasicAuth: base64encoded string=> email:password
