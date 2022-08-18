@@ -24,6 +24,7 @@ token_auth = HTTPTokenAuth()
 cors = CORS(app)
 
 
+
 @basic_auth.verify_password
 def verify_password(email, password):
     u = User.query.filter_by(email=email.lower()).first()
@@ -238,6 +239,7 @@ class Ingredient(db.Model):
 '''
     ### USER ROUTES ###
 @app.get('/login')
+@basic_auth.login_required()
 def login():
     '''
         BasicAuth: base64encoded string=> email:password
