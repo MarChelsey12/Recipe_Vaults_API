@@ -119,6 +119,11 @@ class User(db.Model):
         self.email = data['email']
         self.password = self.hash_password(data['password'])
 
+    def user_collections(self):
+        return self.collections.filter(Collection.created_by == self.id)
+
+
+
 
 class Collection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -276,7 +281,7 @@ def post_user():
 @token_auth.login_required()
 def put_user():
     '''
-        Changes the information fro the user that has the token
+        Changes the information for the user that has the token
         TokenAuth: Bearer TOKEN
         expected payload (does not need to include all key value pairsAny omitted values will remain unchanged):
         {
@@ -307,30 +312,39 @@ def delete_user():
 @token_auth.login_required()
 def get_collections():
     '''
-        returns All collections
+        returns all published collections for current user
+        TokenAuth: Bearer TOKEN
     '''
-    return make_response({"Collections": [collection.to_dict() for collection in Collection.query.all()]}, 200)
-
+    user = g.current_user
+    return make_response({"collections": [collection.to_dict() for collection in user.user_collections()]}, 200)
 
 @app.post('/collection')
 @token_auth.login_required()
 def post_collection():
     '''
+        Can only be used by the user with <user_id>
+        TokenAuth: Bearer TOKEN
         expected payload:
         {
             "name" : STRING,            
         }
     '''
-    data = request.get_json().get("name")
-    new_group = Collection(name=data)
+    data = request.get_json()
+    user = g.current_user
+    new_group = Collection(**data)
     new_group.save()
-    return make_response("success", 200)
+    user.collections.append(new_group)
+    user.save()
+    return make_response(f"success {new_group.name} created", 200)
+    
 
 
 @app.put('/collection/<int:id>')
 @token_auth.login_required()
 def put_collection(id):
     '''
+        Can only be used by the user with <user_id> 
+        TokenAuth: Bearer TOKEN 
         expected payload:
         {
             "name" : STRING,           
@@ -347,7 +361,7 @@ def put_collection(id):
 
 @app.delete('/collection/<int:id>')
 @token_auth.login_required()
-def delete_collection():
+def delete_collection(id):
     '''
         Can only be used by the user with <user_id>
         TokenAuth: Bearer TOKEN
@@ -364,23 +378,26 @@ def delete_collection():
 @token_auth.login_required()
 def get_recipes():
     '''
-        returns All Recipe information
+        returns all published collections for logged in user
+        TokenAuth: Bearer TOKEN
     '''
     card = Recipe.query.get(id)
     user = g.current_user
     if card.user_id == user.id:
         return make_response({"recipes":[recipe.to_dict() for recipe in Recipe.query.all()]}, 200)
 
-@app.get('/recipe/<int:id>')
-@token_auth.login_required()
-def get_recipe(id):
-    '''
-        returns info for the recipe with the id:id
-    '''
-    card = Recipe.query.get(id)
-    user = g.current_user
-    if card.user_id == user.id:
-        return make_response(Recipe.query.filter_by(id=id).first().to_dict(), 200)
+# @app.get('/recipe/<int:id>')
+# @token_auth.login_required()
+# def get_recipe(id):
+#     '''
+#         Can only be used by the user with <user_id>
+#         TokenAuth: Bearer TOKEN
+#         returns info for the recipe with the id:id
+#     '''
+#     card = Recipe.query.get(id)
+#     user = g.current_user
+#     if card.user_id == user.id:
+#         return make_response(Recipe.query.filter_by(id=id).first().to_dict(), 200)
 
 @app.post('/recipe')
 @token_auth.login_required()
@@ -403,7 +420,8 @@ def post_recipe():
     new_recipe.save()
     return make_response("success",200)
 
-@app.put('/recipe')
+
+@app.put('/recipe/<int:id>')
 @token_auth.login_required()
 def put_recipe():
     '''
@@ -430,6 +448,12 @@ def put_recipe():
 @app.delete('/recipe/<int:id>')
 @token_auth.login_required()
 def delete_recipe(id):
+    '''
+        Can only be used by the user with <user_id>
+        TokenAuth: Bearer TOKEN
+        Will delete individual recipe
+        
+    '''
     card = Recipe.query.get(id)
     user = g.current_user
     if not card:
